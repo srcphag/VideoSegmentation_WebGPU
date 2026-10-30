@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+dist-ssr/
+
+# local media samples & exported renders
+video/
+*.mov
+
+# editor / vault config
+.obsidian/
+.vscode/
+
+# test artifacts
+test-results/
+playwright-report/
+blob-report/
+
+# logs & os files
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# env
+.env
+.env.local
