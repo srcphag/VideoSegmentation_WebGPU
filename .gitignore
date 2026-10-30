@@ -13,6 +13,9 @@ video/
 .obsidian/
 .vscode/
 
+# netlify local state
+.netlify/
+
 # test artifacts
 test-results/
 playwright-report/

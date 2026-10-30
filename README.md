@@ -2,6 +2,8 @@
 
 100% client-side video element segmentation that renders Apple ProRes `.mov` output — no uploads, no backend. Everything (auto-detection, tracking, compositing, encoding) runs in the browser on WebGPU / WASM.
 
+**Live:** https://video-segmentation-webgpu.netlify.app
+
 ## Features
 
 - **Automatic element discovery** — a uniform grid of points is decoded through SAM 2.1 / EdgeTAM image embeddings, then filtered by IoU, mask stability, area and frame-corner rejection, deduplicated with low-res NMS.
@@ -35,6 +37,14 @@ Useful URL flags:
 
 - `?demo=1` — load a synthetic 320×180 clip with moving elements.
 - `?mockAi=1` — skip model download and use deterministic mock masks.
+
+## Deploy
+
+Hosted on Netlify (project `video-segmentation-webgpu`). `netlify.toml` pins the build command, publish directory, and asset caching.
+
+```bash
+netlify deploy --build --prod
+```
 
 ## Stack
 
