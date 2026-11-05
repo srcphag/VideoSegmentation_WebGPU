@@ -10,6 +10,8 @@ export interface VideoViewportCallbacks {
   onClickDropzone: () => void;
   onToggleStats: () => void;
   onResetAll: () => void;
+  onSnapshotPng: () => void;
+  onExportProres: () => void;
   onHoverCanvasPixel: (x: number, y: number) => void;
   onLeaveCanvas: () => void;
   onClickCanvasPixel: (x: number, y: number) => void;
@@ -50,6 +52,8 @@ export function createVideoViewport(
       <div class="ts-header-actions">
         <button type="button" class="button ts-btn-small" data-testid="stats-toggle-btn">stats</button>
         <button type="button" class="button ts-btn-small" data-testid="reset-all-btn">reset all</button>
+        <button type="button" class="button ts-btn-small is-primary" data-testid="snapshot-png-btn" title="Download current composite frame as PNG">snapshot png</button>
+        <button type="button" class="button ts-btn-small" data-testid="export-prores-btn" title="Render and download ProRes .mov">export prores</button>
       </div>
     </header>
 
@@ -79,6 +83,12 @@ export function createVideoViewport(
   });
   q<HTMLButtonElement>('reset-all-btn').addEventListener('click', () => {
     callbacks.onResetAll();
+  });
+  q<HTMLButtonElement>('snapshot-png-btn').addEventListener('click', () => {
+    callbacks.onSnapshotPng();
+  });
+  q<HTMLButtonElement>('export-prores-btn').addEventListener('click', () => {
+    callbacks.onExportProres();
   });
 
   dropzone.addEventListener('click', () => {
@@ -159,6 +169,15 @@ export function createVideoViewport(
       state.showStats
     );
 
+    const snapshotBtn = q<HTMLButtonElement>('snapshot-png-btn');
+    snapshotBtn.disabled = !state.video;
+    const exportHeaderBtn = q<HTMLButtonElement>('export-prores-btn');
+    exportHeaderBtn.disabled =
+      !state.video || state.exportStatus.isExporting;
+    exportHeaderBtn.textContent = state.exportStatus.isExporting
+      ? 'encoding...'
+      : 'export prores';
+
     if (state.showStats) {
       statsOverlay.style.display = 'block';
       const iouStr = currentMask ? currentMask.iouScore.toFixed(2) : '—';
@@ -166,11 +185,13 @@ export function createVideoViewport(
       const selectedElements = currentMask
         ? currentMask.elements.filter((el) => el.selected).length
         : 0;
+      const modelShort =
+        state.modelId.split('/').pop()?.replace('-ONNX', '') ?? '';
       statsOverlay.innerHTML = `
-        <div>MODEL: ${state.modelId.split('/').pop()} (${state.runtimeBackend.toUpperCase()})</div>
-        <div>FRAME: ${state.currentFrame} | TRACKED: ${trackedCount}</div>
-        <div>ELEMENTS: ${selectedElements} / ${totalElements} SELECTED | IOU: ${iouStr}</div>
-        <div>PREVIEW: ${state.previewMode} | SPEED: ${state.tracking.msPerFrame} ms/f</div>
+        <div><span class="ts-stat-key">model:</span> ${modelShort} (${state.runtimeBackend})</div>
+        <div><span class="ts-stat-key">frame:</span> ${state.currentFrame} / ${Math.max(0, (state.video?.totalFrames ?? 1) - 1)} <span class="ts-stat-key">tracked:</span> ${trackedCount}</div>
+        <div><span class="ts-stat-key">elements:</span> ${selectedElements} / ${totalElements} sel <span class="ts-stat-key">iou:</span> ${iouStr}</div>
+        <div><span class="ts-stat-key">preview:</span> ${state.previewMode} <span class="ts-stat-key">speed:</span> ${state.tracking.msPerFrame} ms/f</div>
       `;
     } else {
       statsOverlay.style.display = 'none';

@@ -1,11 +1,11 @@
 import { AppState, FrameMaskEntry } from '../types/segmentationTypes';
 
 function formatTimecode(frameIndex: number, fps: number): string {
-  if (!Number.isFinite(fps) || fps <= 0) return '00:00.00';
-  const totalSeconds = Math.max(0, frameIndex / fps);
+  if (!Number.isFinite(fps) || fps <= 0) return '00:00';
+  const totalSeconds = Math.max(0, Math.floor(frameIndex / fps));
   const mins = Math.floor(totalSeconds / 60);
   const secs = totalSeconds % 60;
-  return `${String(mins).padStart(2, '0')}:${secs.toFixed(2).padStart(5, '0')}`;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
 export interface TimelineBarCallbacks {
@@ -32,12 +32,6 @@ export function createTimelineBar(
   footer.setAttribute('data-testid', 'timeline-bar');
 
   footer.innerHTML = `
-    <div class="ts-timeline-track-wrapper" data-testid="timeline-scrubber-track" title="Click or drag to scrub frames">
-      <div class="ts-timeline-range-fill" data-testid="timeline-range-fill"></div>
-      <canvas class="ts-timeline-status-canvas" data-testid="timeline-status-canvas" width="600" height="22"></canvas>
-      <div class="ts-timeline-playhead" data-testid="timeline-playhead" style="left: 0%;"></div>
-    </div>
-
     <div class="ts-transport-row">
       <div class="ts-transport-left">
         <button type="button" class="ts-media-btn" data-testid="prev-keyframe-btn" title="Jump to previous keyframe">|&lt;</button>
@@ -47,13 +41,13 @@ export function createTimelineBar(
         <button type="button" class="ts-media-btn" data-testid="next-keyframe-btn" title="Jump to next keyframe">&gt;|</button>
       </div>
 
-      <div class="ts-transport-left">
+      <div class="ts-transport-center">
         <button type="button" class="ts-media-btn" data-testid="set-in-btn" title="Set In point to current frame">[ in</button>
-        <div class="ts-control-split" style="width: 74px; height: 24px;">
+        <div class="ts-control-split" style="width: 74px; height: 26px;">
           <span class="ts-control-prefix" style="padding:0 4px; font-size:10px;">in</span>
           <input type="number" min="0" step="1" class="ts-control-input" style="font-size:11px;" data-testid="in-frame-input" value="0" />
         </div>
-        <div class="ts-control-split" style="width: 78px; height: 24px;">
+        <div class="ts-control-split" style="width: 78px; height: 26px;">
           <span class="ts-control-prefix" style="padding:0 4px; font-size:10px;">out</span>
           <input type="number" min="0" step="1" class="ts-control-input" style="font-size:11px;" data-testid="out-frame-input" value="0" />
         </div>
@@ -61,8 +55,17 @@ export function createTimelineBar(
       </div>
 
       <div class="ts-time-display">
-        <span class="ts-time-current" data-testid="frame-counter-label">Frame 0000 / 0000</span>
-        <span data-testid="timecode-label">00:00.00</span>
+        <span class="ts-time-current" data-testid="frame-counter-label">frame 0000</span>
+        <span data-testid="timecode-label">00:00 / 00:00</span>
+      </div>
+    </div>
+
+    <div class="ts-timeline-tracks" data-testid="timeline-scrubber-track" title="Click or drag to scrub frames">
+      <canvas class="ts-timeline-keyframes-canvas" data-testid="timeline-status-canvas"></canvas>
+      <div class="ts-timeline-progress-track">
+        <div class="ts-timeline-range-fill" data-testid="timeline-range-fill"></div>
+        <div class="ts-timeline-progress-fill" data-testid="timeline-progress-fill"></div>
+        <div class="ts-timeline-playhead" data-testid="timeline-playhead" style="left: 0%;"></div>
       </div>
     </div>
   `;
@@ -73,9 +76,10 @@ export function createTimelineBar(
     return el as T;
   };
 
-  const trackWrapper = q<HTMLDivElement>('timeline-scrubber-track');
+  const tracksWrapper = q<HTMLDivElement>('timeline-scrubber-track');
   const rangeFill = q<HTMLDivElement>('timeline-range-fill');
-  const statusCanvas = q<HTMLCanvasElement>('timeline-status-canvas');
+  const progressFill = q<HTMLDivElement>('timeline-progress-fill');
+  const keyframesCanvas = q<HTMLCanvasElement>('timeline-status-canvas');
   const playhead = q<HTMLDivElement>('timeline-playhead');
   const inInput = q<HTMLInputElement>('in-frame-input');
   const outInput = q<HTMLInputElement>('out-frame-input');
@@ -88,24 +92,24 @@ export function createTimelineBar(
 
   const seekFromClientX = (clientX: number) => {
     if (currentTotalFrames <= 0) return;
-    const rect = trackWrapper.getBoundingClientRect();
+    const rect = tracksWrapper.getBoundingClientRect();
     if (rect.width <= 0) return;
     const norm = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const targetFrame = Math.round(norm * (currentTotalFrames - 1));
     callbacks.onSeekFrame(targetFrame);
   };
 
-  trackWrapper.addEventListener('pointerdown', (e) => {
+  tracksWrapper.addEventListener('pointerdown', (e) => {
     if (currentTotalFrames <= 0) return;
     isDraggingScrubber = true;
-    trackWrapper.setPointerCapture(e.pointerId);
+    tracksWrapper.setPointerCapture(e.pointerId);
     seekFromClientX(e.clientX);
   });
-  trackWrapper.addEventListener('pointermove', (e) => {
+  tracksWrapper.addEventListener('pointermove', (e) => {
     if (!isDraggingScrubber) return;
     seekFromClientX(e.clientX);
   });
-  trackWrapper.addEventListener('pointerup', () => {
+  tracksWrapper.addEventListener('pointerup', () => {
     isDraggingScrubber = false;
   });
 
@@ -145,42 +149,64 @@ export function createTimelineBar(
     }
   });
 
-  const drawStatusTrack = (
+  /**
+   * Top track: one thin dash per frame — cyan = tracked, red = low confidence,
+   * dim gray = untracked, white = current frame, diamonds = keyframes.
+   */
+  const drawKeyframeTrack = (
     totalFrames: number,
-    masks: ReadonlyMap<number, FrameMaskEntry>
+    masks: ReadonlyMap<number, FrameMaskEntry>,
+    currentFrame: number
   ) => {
-    const ctx = statusCanvas.getContext('2d');
+    const ctx = keyframesCanvas.getContext('2d');
     if (!ctx) return;
-    const w = statusCanvas.width;
-    const h = statusCanvas.height;
-    ctx.clearRect(0, 0, w, h);
 
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = Math.max(60, tracksWrapper.clientWidth);
+    const cssH = 10;
+    if (
+      keyframesCanvas.width !== Math.round(cssW * dpr) ||
+      keyframesCanvas.height !== Math.round(cssH * dpr)
+    ) {
+      keyframesCanvas.width = Math.round(cssW * dpr);
+      keyframesCanvas.height = Math.round(cssH * dpr);
+    }
+
+    const w = keyframesCanvas.width;
+    const h = keyframesCanvas.height;
+    ctx.clearRect(0, 0, w, h);
     if (totalFrames <= 0) return;
 
-    const frameWidth = Math.max(2, w / totalFrames);
+    const dashW = Math.max(2 * dpr, Math.floor((w / totalFrames) * 0.62));
 
-    masks.forEach((entry, fIdx) => {
-      const x = (fIdx / Math.max(1, totalFrames - 1)) * (w - frameWidth);
-      // Tracked bar segment at bottom
-      ctx.fillStyle = entry.lowConfidence
-        ? 'rgba(255, 85, 85, 0.7)'
-        : 'rgba(139, 233, 253, 0.65)';
-      ctx.fillRect(x, h - 6, frameWidth, 6);
+    for (let f = 0; f < totalFrames; f++) {
+      const x = (f / Math.max(1, totalFrames - 1)) * (w - dashW);
+      const entry = masks.get(f);
 
-      // Keyframe diamond marker at center
-      if (entry.isKeyframe) {
-        const cx = x + frameWidth / 2;
-        const cy = 7;
-        ctx.fillStyle = '#8be9fd';
+      if (f === currentFrame) {
+        ctx.fillStyle = '#ffffff';
+      } else if (entry) {
+        ctx.fillStyle = entry.lowConfidence
+          ? 'rgba(255, 85, 85, 0.85)'
+          : 'rgba(139, 233, 253, 0.75)';
+      } else {
+        ctx.fillStyle = 'rgba(204, 204, 204, 0.13)';
+      }
+      ctx.fillRect(x, 0, dashW, h);
+
+      if (entry?.isKeyframe) {
+        const cx = x + dashW / 2;
+        const r = Math.min(3 * dpr, h / 2 - 1);
+        ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.moveTo(cx, cy - 4);
-        ctx.lineTo(cx + 4, cy);
-        ctx.lineTo(cx, cy + 4);
-        ctx.lineTo(cx - 4, cy);
+        ctx.moveTo(cx, h / 2 - r);
+        ctx.lineTo(cx + r, h / 2);
+        ctx.lineTo(cx, h / 2 + r);
+        ctx.lineTo(cx - r, h / 2);
         ctx.closePath();
         ctx.fill();
       }
-    });
+    }
   };
 
   const update = (
@@ -222,18 +248,18 @@ export function createTimelineBar(
       outInput.value = String(state.outFrame);
     }
 
-    const curStr = String(state.currentFrame).padStart(4, '0');
-    const totStr = String(Math.max(0, total - 1)).padStart(4, '0');
     q<HTMLSpanElement>('frame-counter-label').textContent =
-      `Frame ${curStr} / ${totStr}`;
-    q<HTMLSpanElement>('timecode-label').textContent = formatTimecode(
-      state.currentFrame,
-      fps
-    );
+      `frame ${state.currentFrame}`;
+    q<HTMLSpanElement>('timecode-label').textContent =
+      `${formatTimecode(state.currentFrame, fps)} / ${formatTimecode(
+        Math.max(0, total - 1),
+        fps
+      )}`;
 
     if (total > 1) {
       const playheadPct = (state.currentFrame / (total - 1)) * 100;
       playhead.style.left = `${playheadPct}%`;
+      progressFill.style.width = `${playheadPct}%`;
 
       const inPct = (state.inFrame / (total - 1)) * 100;
       const outPct = (state.outFrame / (total - 1)) * 100;
@@ -241,11 +267,12 @@ export function createTimelineBar(
       rangeFill.style.width = `${Math.max(0, outPct - inPct)}%`;
     } else {
       playhead.style.left = '0%';
+      progressFill.style.width = '0%';
       rangeFill.style.left = '0%';
       rangeFill.style.width = '100%';
     }
 
-    drawStatusTrack(total, masks);
+    drawKeyframeTrack(total, masks, state.currentFrame);
   };
 
   return {

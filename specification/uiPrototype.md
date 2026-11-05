@@ -49,7 +49,7 @@ Layout and styling follow the exact conventions of **`https://github.com/srcphag
 
 ### 2.2 Center Panel: Interactive Selection Viewport (`src/components/videoViewport.ts`)
 - **Stage Header (`.ts-section-heading`)**:
-  - App title (`VideoSegmentation v0.1`), active video resolution & FPS label, `stats` HUD toggle, and `reset all` button.
+  - App title (`VideoSegmentation v0.1`), active video resolution & FPS label, `stats` HUD toggle, `reset all` button, and the render action buttons `snapshot png` (primary — downloads the current composite frame as PNG) and `export prores` (triggers the ProRes `.mov` render/export).
 - **Empty State Dropzone**:
   - Drag-and-drop card for `.mp4`, `.webm`, and `.mov` files when no video is loaded.
 - **Composite & Element-Selection Canvas (`.ts-render-canvas`)**:
@@ -75,5 +75,7 @@ Layout and styling follow the exact conventions of **`https://github.com/srcphag
   - **Export Action & Progress**: `export .mov` button, live encoding progress bar, and encoding FPS readout.
 
 ### 2.4 Bottom Center: Timeline & Keyframe Scrubber (`src/components/timelineBar.ts`)
-- **Transport Bar**: Play / Pause toggle, Step `-1` / `+1` frame, Jump to Previous/Next Keyframe, `In`/`Out` frame bounds, frame counter, and timecode.
-- **Scrubber Track**: Instantaneous playhead scrubbing, `In`/`Out` range highlight, **Keyframe** diamond markers (`◆`), and **Tracked Frame** bars.
+- **Transport Bar** (above the tracks): Play / Pause toggle, Step `-1` / `+1` frame, Jump to Previous/Next Keyframe on the left; `[ in` / `out ]` setters + numeric `In`/`Out` frame fields centered; right-aligned `frame N` + `MM:SS / MM:SS` timecode.
+- **Double Timeline (TextureStack prototype style)**:
+  1. **Keyframe/Status Track** (top, thin `10px` segmented canvas): one dash per frame — cyan = tracked, red = low confidence, dim gray = untracked, white = current frame, white diamond = keyframe.
+  2. **Video Progress Track** (bottom, `14px`): cyan progress fill up to the playhead, `In`/`Out` range highlight, white playhead spanning both tracks. Clicking or dragging anywhere on the tracks scrubs instantly.

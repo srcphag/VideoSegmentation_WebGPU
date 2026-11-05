@@ -33,7 +33,7 @@ class VideoSegmentationApp {
     inFrame: 0,
     outFrame: 0,
     isPlaying: false,
-    showStats: false,
+    showStats: true,
 
     modelId: 'onnx-community/sam2.1-hiera-small-ONNX',
     runtimeBackend: 'webgpu',
@@ -144,6 +144,8 @@ class VideoSegmentationApp {
         this.syncUI();
       },
       onResetAll: () => this.handleResetAll(),
+      onSnapshotPng: () => this.handleSnapshotPng(),
+      onExportProres: () => void this.handleExportMov(),
       onHoverCanvasPixel: (x, y) => this.handleHoverCanvasPixel(x, y),
       onLeaveCanvas: () => this.handleSetHoveredElement(null),
       onClickCanvasPixel: (x, y) => this.handleClickCanvasPixel(x, y),
@@ -746,6 +748,22 @@ class VideoSegmentationApp {
     this.state.outFrame = clampedOut;
     this.state.tracking.targetEndFrame = clampedOut;
     this.syncUI();
+  }
+
+  public handleSnapshotPng(): void {
+    if (!this.state.video) return;
+    const canvas = this.viewport.canvas;
+    const base = this.state.video.filename.replace(/\.[^.]+$/, '');
+    const frameTag = String(this.state.currentFrame).padStart(4, '0');
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${base}_frame${frameTag}_${this.state.previewMode}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }, 'image/png');
   }
 
   public async handleExportMov(): Promise<void> {
