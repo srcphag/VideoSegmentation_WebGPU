@@ -35,7 +35,7 @@ class VideoSegmentationApp {
     isPlaying: false,
     showStats: false,
 
-    modelId: 'onnx-community/EdgeTAM-ONNX',
+    modelId: 'onnx-community/sam2.1-hiera-small-ONNX',
     runtimeBackend: 'webgpu',
     modelReady: false,
     modelLoadingProgress: 0,
@@ -189,7 +189,11 @@ class VideoSegmentationApp {
 
     this.syncUI();
 
-    if (params.get('demo') === '1') {
+    // The demo clip (penguins.mp4) is loaded by default at startup.
+    // `?demo=0` skips autoload; `?synthetic=1` loads the procedural test clip.
+    if (params.get('synthetic') === '1') {
+      this.handleLoadSyntheticClip();
+    } else if (params.get('demo') !== '0') {
       void this.handleLoadDemoClip();
     }
   }
@@ -356,6 +360,38 @@ class VideoSegmentationApp {
     this.propagator.clearAllMasks();
     this.state.hoveredElementId = null;
 
+    try {
+      const demoUrl = `${import.meta.env.BASE_URL}penguins.mp4`;
+      const meta = await this.frameManager.loadVideoFromUrl(
+        demoUrl,
+        'penguins.mp4'
+      );
+      this.state.video = meta;
+      this.state.currentFrame = 0;
+      this.state.inFrame = 0;
+      this.state.outFrame = meta.totalFrames - 1;
+      this.state.tracking = {
+        isTracking: false,
+        currentFrame: 0,
+        targetEndFrame: this.state.outFrame,
+        msPerFrame: 0,
+        lowConfidenceWarning: false,
+        statusText: 'idle',
+      };
+      await this.seekToFrame(0);
+    } catch (err) {
+      this.addError(
+        err instanceof Error ? err.message : 'Failed to load demo clip.'
+      );
+    }
+  }
+
+  public handleLoadSyntheticClip(): void {
+    this.stopPlayback();
+    this.propagator.stopPropagation();
+    this.propagator.clearAllMasks();
+    this.state.hoveredElementId = null;
+
     const meta = this.frameManager.loadSyntheticVideo(
       320,
       180,
@@ -375,7 +411,7 @@ class VideoSegmentationApp {
       lowConfidenceWarning: false,
       statusText: 'idle',
     };
-    await this.seekToFrame(0);
+    void this.seekToFrame(0);
   }
 
   public async seekToFrame(frameIndex: number): Promise<void> {

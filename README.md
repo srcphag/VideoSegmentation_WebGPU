@@ -35,8 +35,9 @@ npm run test:unit  # vitest (pipeline + real ProRes encode)
 
 Useful URL flags:
 
-- `?demo=1` — load a synthetic 320×180 clip with moving elements.
-- `?mockAi=1` — skip model download and use deterministic mock masks.
+- `?demo=0` — skip the auto-loaded demo clip (`penguins.mp4`, loaded by default).
+- `?synthetic=1` — load the procedural 320×180 test clip instead of the demo video.
+- `?mockAi=1` — skip model download and use deterministic mock masks (pair with `?synthetic=1`).
 
 ## Deploy
 

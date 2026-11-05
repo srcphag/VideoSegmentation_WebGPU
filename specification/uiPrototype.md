@@ -32,6 +32,7 @@ Layout and styling follow the exact conventions of **`https://github.com/srcphag
 ### 2.1 Left Panel: Inputs & Auto-Detect (`src/components/topBar.ts`)
 - **Video Loader (`.ts-source-block`)**:
   - `"load video"` button, `"demo clip"` button, and clickable `96×96` square preview thumbnail box (`.ts-source-preview`).
+  - The bundled demo clip (`public/penguins.mp4`) is loaded automatically at startup (skip with `?demo=0`, procedural test clip with `?synthetic=1`).
   - Displays active file metadata pill (`filename`, `width × height`, `fps`, `totalFrames`).
 - **Model Selector (`.ts-control-split`)**:
   - Dropdown to switch between **EdgeTAM** (`onnx-community/EdgeTAM-ONNX`), **SAM 2.1 Tiny** (`onnx-community/sam2.1-hiera-tiny-ONNX`), **SlimSAM 77** (`Xenova/slimsam-77-uniform`), **SAM 2.1 Small** (`onnx-community/sam2.1-hiera-small-ONNX`), and **SAM 2.1 Base+ (High Precision)** (`onnx-community/sam2.1-hiera-base-plus-ONNX`).

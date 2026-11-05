@@ -39,10 +39,27 @@ export class VideoFrameManager {
   }
 
   public async loadVideoFile(file: File): Promise<VideoMetadata> {
-    this.disposeCurrent();
-
     const url = URL.createObjectURL(file);
-    this.objectUrl = url;
+    return this.loadVideoSource(url, file.name, url);
+  }
+
+  /**
+   * Loads a video served over HTTP(S) — e.g. the bundled demo clip in public/.
+   */
+  public async loadVideoFromUrl(
+    url: string,
+    filename: string
+  ): Promise<VideoMetadata> {
+    return this.loadVideoSource(url, filename, null);
+  }
+
+  private async loadVideoSource(
+    src: string,
+    filename: string,
+    objectUrl: string | null
+  ): Promise<VideoMetadata> {
+    this.disposeCurrent();
+    this.objectUrl = objectUrl;
 
     await new Promise<void>((resolve, reject) => {
       const onLoaded = () => {
@@ -51,7 +68,7 @@ export class VideoFrameManager {
       };
       const onError = () => {
         cleanup();
-        reject(new Error(`Unable to decode video file "${file.name}".`));
+        reject(new Error(`Unable to decode video "${filename}".`));
       };
       const cleanup = () => {
         this.videoEl.removeEventListener('loadeddata', onLoaded);
@@ -59,7 +76,7 @@ export class VideoFrameManager {
       };
       this.videoEl.addEventListener('loadeddata', onLoaded);
       this.videoEl.addEventListener('error', onError);
-      this.videoEl.src = url;
+      this.videoEl.src = src;
       this.videoEl.load();
     });
 
@@ -80,7 +97,7 @@ export class VideoFrameManager {
     const thumbnailUrl = this.createSquareThumbnail(width, height);
 
     this.metadata = {
-      filename: file.name,
+      filename,
       width,
       height,
       fps,

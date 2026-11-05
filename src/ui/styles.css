@@ -45,12 +45,14 @@ body {
   border-right: 1px solid #161616;
   gap: 14px;
   padding: 16px 20px;
+  overflow-x: hidden;
 }
 
 .ts-panel-params {
   border-left: 1px solid #161616;
   gap: 14px;
   padding: 16px 20px;
+  overflow-x: hidden;
 }
 
 .ts-panel-stage {
@@ -88,6 +90,11 @@ body {
   font-weight: 400;
   text-transform: uppercase;
   white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
 }
 
 .ts-header-actions {
@@ -116,6 +123,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 6px;
+  min-width: 0;
 }
 
 .ts-field-label {
@@ -124,6 +132,7 @@ body {
   font-weight: 700;
   line-height: 20px;
   text-transform: lowercase;
+  flex-shrink: 0;
 }
 
 .ts-field-count {

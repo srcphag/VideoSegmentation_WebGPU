@@ -17,7 +17,7 @@ A 100% client-side web application styled after **`TextureMosaic`** (`letieu/ter
   - **EdgeTAM** (`onnx-community/EdgeTAM-ONNX`) — default mobile-optimized SAM 2 tracker.
   - **SAM 2.1 Tiny** (`onnx-community/sam2.1-hiera-tiny-ONNX`).
   - **SlimSAM 77** (`Xenova/slimsam-77-uniform`).
-  - **SAM 2.1 Small** (`onnx-community/sam2.1-hiera-small-ONNX`) — higher precision tracker.
+  - **SAM 2.1 Small** (`onnx-community/sam2.1-hiera-small-ONNX`) — default, higher precision tracker.
   - **SAM 2.1 Base+ (High Precision)** (`onnx-community/sam2.1-hiera-base-plus-ONNX`) — strongest detection accuracy.
 - **FR-05**: Provide an **Auto-Detect** scanner in the Left `Inputs` panel with configurable parameters:
   - **Grid Density** (`4` to `10` points per side, default `6` = 36 uniform sample points).
